@@ -2,33 +2,50 @@
 // or can be replicated and will round-robin requests among peers.  
 
 'use strict';
-//const arrNodes = [ "xx.yy.xx.yy" ] // you might need this for K8S
-//const arrNodes = [ "node-svc-01" ]
-const arrNodes = [ "node-svc-01", "node-svc-02" ]
-//const arrNodes = [ "node-svc-01", "node-svc-02" , "node-svc-03" ]
+
+// vary these constants according to where you are running (GCS, VMs, K8S) and how many VMs you have, if that's the lesson)
+// to do: this should be a command-line parameter that lets the app know how it is running
+//const arrNodes = [ "localhost" ]                                    // for testing on GCS
+//const arrNodes = [ "node-svc-01" ]                                  // for 1 VM
+//const arrNodes = [ "node-svc-01", "node-svc-02" ]                   // for 2 VMs
+//const arrNodes = [ "node-svc-01", "node-svc-02" , "node-svc-03" ]   // for 3 VMs
+const arrNodes = [ process.env.NODE_SVC_PUBLIC_SERVICE_HOST  ];       //  use this for K8S
+
+console.log("service host is " + arrNodes[0]);
+
+
 const express = require('express');
 const fetch = require('node-fetch');
 const bodyParser = require('body-parser')
-//const Request = require("request");
 
 // Constants
-const PORT = 3000;
+const PORT = 30100;
 const HOST = '0.0.0.0';
 const app = express();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// shuts down application
 app.get('/999', (req, res) => {
- return process.exit(999);
+ (async () => {
+   console.warn("***SHUTDOWN SIGNAL***");
+   res.write("Shutting down.");
+
+   res.status(200).end();
+   return process.exit(999);
+  })();
 })
 
+// simplest get; recursion end point
 app.get('/0?', (req, res) => {     // matches either / or /0
-  //(async () => {
-    res.write(dateIPStamp({ "action":"GET" }, req.ip));
+  (async () => {
+    // A simple change is to alter the returned data, 
+    // e.g. change "ThisAction" to "Action"
+    res.write(dateIPStamp({ "Action":"GET" }, req.ip));
     res.status(200).end();
     console.log('Console: / Server returned success on get.');
-  //y})();
+  })();
 });
 
 // app.get('/:depth(\d+)', (req, res) => {   // WHY does this not work
@@ -76,6 +93,9 @@ app.post('/:depth', (req, res) => {
   })();
 });
 
+///////////////////////////////////////////////////
+///////////// Main body////////////////////////////
+///////////////////////////////////////////////////
 
 app.listen(PORT, HOST);
 
@@ -148,7 +168,7 @@ function buildURL (strLevel) {
   let nextLevel = intCurrLevel - 1;
   let numNodes = arrNodes.length; // to be derived from arrNodes
   let nextNode = nextLevel >= numNodes ? nextLevel % numNodes : nextLevel;
-  let strURL = "http://"+ arrNodes[nextNode] + ":3000/" + nextLevel;
+  let strURL = "http://"+ arrNodes[nextNode] + ":" + PORT + "/" + nextLevel;
     
   console.log ("returning URL " + strURL);
    return(strURL);

@@ -1,3 +1,4 @@
 #!/bin/bash
+# Example Docker build
 
-docker build -t dmacademy/node-svc .
+docker build -t gcr.io/$LOGNAME/node-svc .
